@@ -1,0 +1,9 @@
+const {readFileSync}=require('node:fs');
+const {runInNewContext}=require('node:vm');
+const assert=require('node:assert/strict');
+function setup(){const elements={}, timers=new Map();let next=0;const element=()=>({textContent:'',disabled:false,value:'boundary',style:{},children:[],classList:{add(){},remove(){}},parentElement:{classList:{add(){},remove(){}}},addEventListener(type,fn){this[type]=fn},append(x){this.children.push(x)},replaceChildren(){this.children=[]}});const ids=['queue','revoke','commit','run','reset','mode','agent','authority','ledger','result','hint','log'];for(const id of ids)elements[id]=element();runInNewContext(readFileSync(__dirname+'/app.js','utf8'),{document:{getElementById:id=>elements[id],createElement:element,querySelectorAll:()=>[]},setTimeout:fn=>{timers.set(++next,fn);return next},clearTimeout:id=>timers.delete(id)});return {e:elements,flush(){for(const [id,fn]of [...timers]){timers.delete(id);fn()}}}}
+for(const strategy of ['boundary','cached']){const {e,flush}=setup();e.mode.value=strategy;e.run.click();assert.equal(e.queue.disabled,true);flush();assert.match(e.result.textContent,strategy==='boundary'?/^Blocked/:/^Failure/);assert.equal(e.run.disabled,false);e.mode.change();assert.equal(e.queue.disabled,false);assert.equal(e.mode.disabled,false)}
+{const {e,flush}=setup();e.run.click();e.reset.click();flush();assert.equal(e.ledger.textContent,'No side effect');assert.equal(e.log.children.length,0)}
+{const {e,flush}=setup();e.run.click();e.mode.value='cached';e.mode.change();flush();assert.equal(e.ledger.textContent,'No side effect');assert.equal(e.run.disabled,false)}
+{const {e}=setup();e.queue.click();e.commit.click();assert.match(e.result.textContent,/^Allowed/);const count=e.log.children.length;e.commit.click();assert.equal(e.log.children.length,count)}
+console.log('PASS: both guided outcomes, reset cancellation, strategy cancellation, valid manual path, duplicate commit guard');
