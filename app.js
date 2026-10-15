@@ -1,82 +1,15 @@
-(() => {
-  'use strict';
-  const el = id => document.getElementById(id);
-  let queued = false, revoked = false, done = false, running = false;
-  let timers = [];
-  function log(message) {
-    const item = document.createElement('li');
-    item.textContent = message;
-    el('log').append(item);
-  }
-  function highlight(id, state = 'active') {
-    document.querySelectorAll('.node').forEach(node => node.classList.remove('active', 'blocked'));
-    el(id).parentElement.classList.add(state);
-  }
-  function controls() {
-    el('queue').disabled = running || queued;
-    el('revoke').disabled = running || !queued || revoked || done;
-    el('commit').disabled = running || !queued || done;
-    el('run').disabled = running;
-    el('run').textContent = running ? 'Scenario running…' : done ? 'Run again' : 'Run full scenario';
-  }
-  function reset() {
-    timers.forEach(clearTimeout);
-    timers = [];
-    queued = revoked = done = running = false;
-    el('agent').textContent = 'Ready to request refund';
-    el('authority').textContent = 'Active · version 1';
-    el('ledger').textContent = 'No side effect';
-    el('result').textContent = 'Run the full scenario, or use the three steps below.';
-    el('result').style.background = '#d6eeee';
-    el('hint').textContent = 'Start with Queue refund. Revoke and Commit become available after a request is queued.';
-    el('log').replaceChildren();
-    document.querySelectorAll('.node').forEach(node => node.classList.remove('active', 'blocked'));
-    controls();
-  }
-  function queue() {
-    if (queued) return;
-    queued = true;
-    el('agent').textContent = '£40 refund queued';
-    el('result').textContent = 'Approval captured at version 1. The money has not moved.';
-    el('hint').textContent = 'Next: revoke authority to test a stale approval, or commit now to test valid authority.';
-    highlight('agent');
-    log('Queued refund R-001 under authority version 1. No ledger write.');
-    controls();
-  }
-  function revoke() {
-    if (!queued || revoked || done) return;
-    revoked = true;
-    el('authority').textContent = 'Revoked · version 2';
-    el('result').textContent = 'Authority changed. The queued request still carries version 1.';
-    el('hint').textContent = 'Next: attempt the commit. Will the backend trust the stale approval?';
-    highlight('authority', 'blocked');
-    log('Authority revoked: current version is 2.');
-    controls();
-  }
-  function commit() {
-    if (!queued || done) return;
-    done = true;
-    const deny = revoked && el('mode').value === 'boundary';
-    el('agent').textContent = deny ? 'Request blocked' : 'Request completed';
-    el('ledger').textContent = deny ? 'No side effect' : '£40 refund committed';
-    el('result').textContent = deny ? 'Blocked. Stale approval did not become a payment.' : revoked ? 'Failure: £40 committed after authority was revoked.' : 'Allowed. Authority was still active at commit.';
-    el('result').style.background = revoked && !deny ? '#f4dce1' : '#d6eeee';
-    el('hint').textContent = 'Change the strategy above to compare, or choose Run again. Reset starts a fresh manual test.';
-    highlight('ledger', revoked && !deny ? 'blocked' : 'active');
-    log(deny ? 'Denied R-001: captured version 1 differs from current version 2. Ledger unchanged.' : revoked ? 'Committed R-001 using stale version 1. This is the unsafe comparison.' : 'Committed R-001 with valid authority version 1.');
-    controls();
-  }
-  el('queue').addEventListener('click', queue);
-  el('revoke').addEventListener('click', revoke);
-  el('commit').addEventListener('click', commit);
-  el('reset').addEventListener('click', reset);
-  el('mode').addEventListener('change', reset);
-  el('run').addEventListener('click', () => {
-    reset();
-    running = true;
-    queue();
-    timers.push(setTimeout(revoke, 800));
-    timers.push(setTimeout(() => { running = false; commit(); }, 1600));
-  });
-  reset();
-})();
+(()=>{'use strict';const {scenarios,designs,defaults,run}=PermissionLab,$=id=>document.getElementById(id);let scenario='race',result,cursor=-1,revealed=-1,timer=null,playing=false;const esc=x=>String(x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+$('scenarios').innerHTML=scenarios.map(s=>`<button class="scenario" data-scenario="${s.id}" aria-pressed="false"><span>${s.tag}</span>${s.name}</button>`).join('');$('design').innerHTML=Object.entries(designs).map(([id,d])=>`<option value="${id}" ${id==='atomic'?'selected':''}>${d.name}</option>`).join('');
+function config(){return Object.fromEntries(Object.keys(defaults).map(k=>[k,Number($(k).value)]));}function stop(){clearTimeout(timer);timer=null;playing=false;$('play').textContent=cursor>=0?'Replay experiment':'Run experiment';}
+function prepare(){stop();cursor=-1;revealed=-1;$('error').textContent='';try{result=run(scenario,$('design').value,config());}catch(e){result=null;$('error').textContent=e.message;}const s=scenarios.find(x=>x.id===scenario);$('tag').textContent=s.tag;$('scenario-title').textContent=s.name;$('description').textContent=s.description;$('lesson').textContent=s.lesson;$('design-description').textContent=designs[$('design').value].description;document.querySelectorAll('[data-scenario]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.scenario===scenario)));render();}
+function inspect(i){cursor=i;revealed=Math.max(revealed,i);render();}
+function render(){const event=result?.trace[cursor],state=event?.state;$('progress').textContent=result?`${cursor+1} / ${result.trace.length} events`:'Fix the envelope';$('step').disabled=!result||playing||cursor>=result.trace.length-1;$('export').disabled=!result;$('play').disabled=!result;
+$('trace').innerHTML=result?result.trace.slice(0,revealed+1).map((e,i)=>`<li data-type="${e.type}"><button data-event="${i}" aria-pressed="${i===cursor}"><time>${e.time}ms</time><span>${esc(e.message)}</span></button></li>`).join(''):'';
+$('queue-state').textContent=state?`${Object.keys(state.requests).length} request(s)`:'No queued request';$('authority-state').textContent=state?`Authority r${state.revision} / replica r${state.replicaRevision}`:'Authority r1 / replica r1';$('ledger-state').textContent=state?`£${state.spent} / ${state.ledger.length} write(s)`:'£0 written';$('chain-state').textContent=`Child ≤ £${state?.childLimit??config().limit}`;
+document.querySelectorAll('[data-lane]').forEach(n=>{n.classList.toggle('active',n.dataset.lane===(event?.lane==='authority'?'gate':event?.lane));n.classList.toggle('unsafe',event?.type==='unsafe'&&n.dataset.lane==='ledger');});
+$('outcome').className=event?.violations.length?'unsafe':event&&cursor===result.trace.length-1?'safe':'';$('outcome').textContent=!event?'Choose Run experiment, or Step to inspect each event.':cursor===result.trace.length-1?(result.safe?`Invariants preserved. £${result.spent} written across ${result.ledger.length} effect(s).`:`Invariant violation: ${result.violations.join(', ')}. £${result.spent} written.`):event.message;
+$('event-time').textContent=event?`Event ${event.step} / ${event.time}ms`:'Select an event';$('evidence').innerHTML=event?(event.checks.length?event.checks.map(c=>`<div class="check"><span class="${c.ok?'pass':'fail'}">${c.ok?'✓':'×'}</span><div>${esc(c.rule)}<small>${esc(c.observed)}</small></div></div>`).join(''):`<p>${esc(event.message)}</p>`):'<p>Every event retains a snapshot. Select a trace row to inspect the state at that moment.</p>';
+const r=state?.requests['R-001'];$('envelope').textContent=r?JSON.stringify({subject:r.subject,actor:r.actor,delegation:r.chain,action:r.action,resource:r.resource,audience:r.audience,amount:r.amount,recipient:r.recipient,idempotency_key:r.key,grant_expires_ms:config().ttl,captured_revision:r.capturedRevision,approved_intent:JSON.parse(r.approvedIntent)},null,2):'No request yet.';}
+$('scenarios').addEventListener('click',e=>{const b=e.target.closest('[data-scenario]');if(b){scenario=b.dataset.scenario;prepare();}});$('trace').addEventListener('click',e=>{const b=e.target.closest('[data-event]');if(b){stop();inspect(Number(b.dataset.event));}});$('design').addEventListener('change',prepare);Object.keys(defaults).forEach(k=>$(k).addEventListener('input',()=>{prepare();$('matrix').innerHTML='<tr><td colspan="4">Envelope changed. Run the suite again.</td></tr>';}));$('reset').onclick=prepare;$('step').onclick=()=>{if(result&&cursor<result.trace.length-1)inspect(cursor+1);};$('play').onclick=()=>{if(playing){stop();render();return;}prepare();if(!result)return;playing=true;$('play').textContent='Pause';const tick=()=>{inspect(cursor+1);if(cursor>=result.trace.length-1){stop();render();return;}timer=setTimeout(tick,650);};tick();};
+$('compare').onclick=()=>{try{const cfg=config();$('matrix').innerHTML=scenarios.map(s=>`<tr><td>${esc(s.name)}</td>${Object.keys(designs).map(d=>{const r=run(s.id,d,cfg);return `<td><button class="${r.safe?'pass':'fail'}" data-load="${s.id}:${d}">${r.safe?'Preserved':'Violated'}</button><small>£${r.spent} · ${r.ledger.length} write(s)</small></td>`;}).join('')}</tr>`).join('');}catch(e){$('error').textContent=e.message;}};$('matrix').onclick=e=>{const b=e.target.closest('[data-load]');if(!b)return;[scenario,$('design').value]=b.dataset.load.split(':');prepare();inspect(result.trace.length-1);$('workbench').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});};
+$('export').onclick=()=>{if(!result)return;const blob=new Blob([JSON.stringify({model:'agent-permission-lab-v2',note:'Synthetic deterministic simulation; not a real system trace.',...result},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`permission-lab-${scenario}-${result.design}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};prepare();})();

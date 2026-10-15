@@ -1,0 +1,1 @@
+{"name":"agent-permission-lab","version":"2.0.0","private":true,"type":"commonjs","scripts":{"test":"node test.cjs","serve":"python3 -m http.server 4187"}}
