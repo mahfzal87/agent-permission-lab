@@ -1,0 +1,25 @@
+name: Adapter proposal
+description: Connect an implementation to the permission lifecycle suite.
+title: '[Adapter] '
+body:
+  - type: textarea
+    id: implementation
+    attributes:
+      label: Implementation and supported capabilities
+      description: Name the policy engine or tool, version, execution boundary and unsupported fixtures.
+    validations:
+      required: true
+  - type: textarea
+    id: observer
+    attributes:
+      label: Authoritative effect observer
+      description: Explain how actual effects are read independently of the returned decision.
+    validations:
+      required: true
+  - type: textarea
+    id: setup
+    attributes:
+      label: Reproduction and limitations
+      description: Prefer a local disposable setup. Do not include credentials. State timing, concurrency and external-system limitations.
+    validations:
+      required: true

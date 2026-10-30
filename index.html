@@ -1,14 +1,283 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Explore delegated agent authority, revocation races, stale replicas, approval binding and idempotency in an interactive permission engineering lab by Ahmad Afzal."><title>Agent Permission Lab | Ahmad Afzal</title><link rel="stylesheet" href="lab.css"></head><body>
-<header class="mast"><a href="https://mahmadafzal.com" target="_blank" rel="noopener">Ahmad Afzal</a><span>AI, Products &amp; People</span><a href="https://github.com/mahfzal87/agent-permission-lab" target="_blank" rel="noopener">Source &amp; tests ↗</a></header>
-<main><section class="intro"><div><p class="edition">Agent Permission Lab / 02</p><h1>Permission is a<br>moving target.</h1></div><div class="intro-copy"><p>A token can be valid.<br>The action can still be wrong.</p><p class="sub">Break an agent’s authority at the boundary between a decision and a side effect. Inspect what the system knew, when it knew it, and what actually happened.</p><a href="#workbench" class="jump">Open the workbench ↓</a></div></section>
-<div class="disclosure">Deterministic simulation · Synthetic identities and money · No live model, API or payment calls</div>
-<section id="workbench" class="workbench"><aside class="experiments"><h2>Choose a failure mode</h2><div id="scenarios"></div><div class="legend"><span class="dot"></span> Every result is calculated from the event order and policy below.</div></aside><div class="experiment"><div class="experiment-head"><p id="tag" class="edition"></p><h2 id="scenario-title"></h2><p id="description"></p></div><div class="config"><label>Enforcement design<select id="design"></select></label><p id="design-description"></p></div>
-<details class="policy"><summary>Edit the permission envelope <span>5 parameters</span></summary><div class="inputs"><label>Refund (£)<input id="amount" type="number" min="1" max="100000" value="40"></label><label>Parent limit (£)<input id="limit" type="number" min="1" max="100000" value="100"></label><label>Shared budget (£)<input id="budget" type="number" min="1" max="100000" value="60"></label><label>Grant lifetime (ms)<input id="ttl" type="number" min="1" max="100000" value="1000"></label><label>Replica lag (ms)<input id="lag" type="number" min="0" max="100000" value="200"></label></div><p>Changes reset the trace. Logical time starts at grant issuance. Amounts are whole synthetic pounds.</p></details>
-<div class="controls"><button id="play" class="primary">Run experiment</button><button id="step">Step</button><button id="reset">Reset</button><span id="progress">Ready</span><button id="export">Export evidence ↓</button></div><p id="error" role="alert"></p>
-<div class="architecture" aria-label="Execution path"><div data-lane="delegate"><small>Delegation</small><strong>Human → agents</strong><span id="chain-state">Parent limits constrain child</span></div><b aria-hidden="true">→</b><div data-lane="queue"><small>Async boundary</small><strong>Work queue</strong><span id="queue-state">No queued request</span></div><b aria-hidden="true">→</b><div data-lane="gate"><small>Decision</small><strong>Policy check</strong><span id="authority-state">Authority r1</span></div><b aria-hidden="true">→</b><div data-lane="ledger"><small>Side effect</small><strong>Refund ledger</strong><span id="ledger-state">£0 written</span></div></div>
-<div id="outcome" role="status" aria-live="polite">Choose Run experiment, or Step to inspect each event.</div><div class="investigation"><div class="trace"><h3>Execution trace <span>Logical time</span></h3><ol id="trace"></ol></div><div class="inspector"><h3>Decision evidence <span id="event-time">Select an event</span></h3><div id="evidence"><p>Every event retains a snapshot. Select a trace row to inspect the state at that moment.</p></div><details><summary>Request envelope</summary><pre id="envelope">No request yet.</pre></details></div></div><p id="lesson" class="lesson"></p></div></section>
-<section class="comparison"><div class="section-heading"><div><p class="edition">Run the same faults against every design</p><h2>A check is not a transaction.</h2></div><button id="compare" class="primary">Run comparison suite</button></div><p>Each cell runs the same engine with the current envelope. “Preserved” means no modelled invariant was violated, not a security certification. A rejection at enqueue can also preserve an invariant.</p><div class="table-wrap"><table><caption class="sr">Scenario outcomes across enforcement designs</caption><thead><tr><th>Experiment</th><th>Task-start</th><th>Preflight</th><th>Atomic</th></tr></thead><tbody id="matrix"><tr><td colspan="4">Run the suite to calculate all 27 experiments.</td></tr></tbody></table></div></section>
-<section class="deep-dive"><div><p class="edition">Implementation contract</p><h2>Put the boundary<br>where the write lives.</h2><p>The atomic design assumes one authoritative transaction can evaluate authority, validate approved intent, reserve budget and record the effect. It is a model of a contract your backend must implement.</p><p>If payment happens in an external provider, a local database transaction alone cannot enforce that whole contract. Define provider idempotency, outbox delivery, reconciliation and the point beyond which revocation can no longer cancel the action.</p></div><pre class="code">transaction(authority, budget, ledger) {
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      name="description"
+      content="Test agent authorisation at the side-effect boundary. A forkable permission lifecycle framework with adversarial fixtures, a CLI, SQLite reference adapter and interactive workbench."
+    />
+    <link rel="canonical" href="https://mahfzal87.github.io/agent-permission-lab/" />
+    <meta
+      property="og:title"
+      content="Agent Permission Lab | Test the permission. Observe the effect."
+    />
+    <meta
+      property="og:description"
+      content="A forkable agent authorisation testing framework. Revoke, mutate, retry, then inspect what actually changed."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://mahfzal87.github.io/agent-permission-lab/" />
+    <title>Agent Permission Lab | Ahmad Afzal</title>
+    <link rel="stylesheet" href="lab.css" />
+  </head>
+  <body>
+    <a class="skip" href="#workbench">Skip to interactive workbench</a>
+    <header class="mast">
+      <a href="https://mahmadafzal.com" target="_blank" rel="noopener">Ahmad Afzal</a
+      ><span>AI, Products &amp; People</span
+      ><a href="https://github.com/mahfzal87/agent-permission-lab" target="_blank" rel="noopener"
+        >Source &amp; tests ↗</a
+      >
+    </header>
+    <main>
+      <section class="intro">
+        <div>
+          <p class="edition">Agent Permission Lab / Framework 03</p>
+          <h1>Permission is a<br />moving target.</h1>
+        </div>
+        <div class="intro-copy">
+          <p>A token can be valid.<br />The action can still be wrong.</p>
+          <p class="sub">
+            Break an agent’s authority at the boundary between a decision and a side effect. Inspect
+            what the system knew, when it knew it, and what actually happened.
+          </p>
+          <div class="intro-actions">
+            <a href="#framework" class="jump">Run it against your implementation ↓</a
+            ><a href="#workbench" class="jump">Try the browser model ↓</a>
+          </div>
+        </div>
+      </section>
+      <section id="framework" class="framework" aria-labelledby="framework-title">
+        <div class="framework-heading">
+          <p class="edition">Agent authorisation testing framework</p>
+          <h2 id="framework-title">The check said yes.<br />What did the system do?</h2>
+          <p>
+            Run adversarial event schedules against an adapter. Compare the decision with the
+            effects in its authoritative store. A deny-everything implementation fails the valid
+            controls.
+          </p>
+          <div class="framework-links">
+            <a
+              href="https://github.com/mahfzal87/agent-permission-lab#quick-start"
+              target="_blank"
+              rel="noopener"
+              >Quick start ↗</a
+            ><a
+              href="https://github.com/mahfzal87/agent-permission-lab/blob/main/docs/write-an-adapter.md"
+              target="_blank"
+              rel="noopener"
+              >Write an adapter ↗</a
+            ><a href="docs/architecture.html">Architecture →</a>
+          </div>
+        </div>
+        <div class="framework-terminal">
+          <p class="terminal-label">No API keys. No npm dependencies.</p>
+          <pre><code>git clone https://github.com/mahfzal87/agent-permission-lab.git
+cd agent-permission-lab
+npm test
+node bin/permission-lab.cjs run --adapter sqlite --format md
+node bin/permission-lab.cjs run --adapter cached --format md</code></pre>
+          <p>Node.js 22+ and Python 3. The cached design should fail. That is the point.</p>
+        </div>
+        <div class="framework-path" aria-label="Framework flow">
+          <div>
+            <small>01 / FIXTURE</small><strong>Change the conditions</strong>
+            <p>Revoke a grant, mutate an approval or repeat a delivery.</p>
+          </div>
+          <div>
+            <small>02 / ADAPTER</small><strong>Exercise your boundary</strong>
+            <p>Run the same contract against a model, local SQLite or your integration.</p>
+          </div>
+          <div>
+            <small>03 / EVIDENCE</small><strong>Inspect actual effects</strong>
+            <p>Expected outcomes, observed ledger and JSON, JUnit or Markdown reports.</p>
+          </div>
+        </div>
+        <p class="framework-limit">
+          Early framework with a versioned adapter contract. Local reference results are regression
+          evidence, not a production security guarantee.
+          <a
+            href="https://github.com/mahfzal87/agent-permission-lab/blob/main/docs/threat-model.md"
+            target="_blank"
+            rel="noopener"
+            >Read the threat model ↗</a
+          >
+        </p>
+      </section>
+      <div class="disclosure">
+        Deterministic simulation · Synthetic identities and money · No live model, API or payment
+        calls
+      </div>
+      <section id="workbench" class="workbench">
+        <aside class="experiments">
+          <h2>Choose a failure mode</h2>
+          <div id="scenarios"></div>
+          <div class="legend">
+            <span class="dot"></span> Every result is calculated from the event order and policy
+            below.
+          </div>
+        </aside>
+        <div class="experiment">
+          <div class="experiment-head">
+            <p id="tag" class="edition"></p>
+            <h2 id="scenario-title"></h2>
+            <p id="description"></p>
+          </div>
+          <div class="config">
+            <label>Enforcement design<select id="design"></select></label>
+            <p id="design-description"></p>
+          </div>
+          <details class="policy">
+            <summary>Edit the permission envelope <span>5 parameters</span></summary>
+            <div class="inputs">
+              <label
+                >Refund (£)<input
+                  id="amount"
+                  type="number"
+                  min="1"
+                  max="100000"
+                  value="40" /></label
+              ><label
+                >Parent limit (£)<input
+                  id="limit"
+                  type="number"
+                  min="1"
+                  max="100000"
+                  value="100" /></label
+              ><label
+                >Shared budget (£)<input
+                  id="budget"
+                  type="number"
+                  min="1"
+                  max="100000"
+                  value="60" /></label
+              ><label
+                >Grant lifetime (ms)<input
+                  id="ttl"
+                  type="number"
+                  min="1"
+                  max="100000"
+                  value="1000" /></label
+              ><label
+                >Replica lag (ms)<input id="lag" type="number" min="0" max="100000" value="200"
+              /></label>
+            </div>
+            <p>
+              Changes reset the trace. Logical time starts at grant issuance. Amounts are whole
+              synthetic pounds.
+            </p>
+          </details>
+          <div class="controls">
+            <button id="play" class="primary">Run experiment</button><button id="step">Step</button
+            ><button id="reset">Reset</button><span id="progress">Ready</span
+            ><button id="share">Copy experiment link ↗</button
+            ><button id="export">Export evidence ↓</button>
+          </div>
+          <p id="error" role="alert"></p>
+          <div id="share-panel" hidden>
+            <label for="share-url">Reproducible experiment link</label
+            ><input id="share-url" type="url" readonly />
+            <p id="share-status" role="status" aria-live="polite"></p>
+          </div>
+          <p id="link-warning" role="status"></p>
+          <div class="architecture" aria-label="Execution path">
+            <div data-lane="delegate">
+              <small>Delegation</small><strong>Human → agents</strong
+              ><span id="chain-state">Parent limits constrain child</span>
+            </div>
+            <b aria-hidden="true">→</b>
+            <div data-lane="queue">
+              <small>Async boundary</small><strong>Work queue</strong
+              ><span id="queue-state">No queued request</span>
+            </div>
+            <b aria-hidden="true">→</b>
+            <div data-lane="gate">
+              <small>Decision</small><strong>Policy check</strong
+              ><span id="authority-state">Authority r1</span>
+            </div>
+            <b aria-hidden="true">→</b>
+            <div data-lane="ledger">
+              <small>Side effect</small><strong>Refund ledger</strong
+              ><span id="ledger-state">£0 written</span>
+            </div>
+          </div>
+          <div id="outcome" role="status" aria-live="polite">
+            Choose Run experiment, or Step to inspect each event.
+          </div>
+          <div class="investigation">
+            <div class="trace">
+              <h3>Execution trace <span>Logical time</span></h3>
+              <ol id="trace"></ol>
+            </div>
+            <div class="inspector">
+              <h3>Decision evidence <span id="event-time">Select an event</span></h3>
+              <div id="evidence">
+                <p>
+                  Every event retains a snapshot. Select a trace row to inspect the state at that
+                  moment.
+                </p>
+              </div>
+              <details>
+                <summary>Request envelope</summary>
+                <pre id="envelope">No request yet.</pre>
+              </details>
+            </div>
+          </div>
+          <p id="lesson" class="lesson"></p>
+        </div>
+      </section>
+      <section class="comparison">
+        <div class="section-heading">
+          <div>
+            <p class="edition">Run the same faults against every design</p>
+            <h2>A check is not a transaction.</h2>
+          </div>
+          <button id="compare" class="primary">Run comparison suite</button>
+        </div>
+        <p>
+          Each cell runs the same engine with the current envelope. “Preserved” means no modelled
+          invariant was violated, not a security certification. A rejection at enqueue can also
+          preserve an invariant.
+        </p>
+        <div class="table-wrap">
+          <table>
+            <caption class="sr">
+              Scenario outcomes across enforcement designs
+            </caption>
+            <thead>
+              <tr>
+                <th>Experiment</th>
+                <th>Task-start</th>
+                <th>Preflight</th>
+                <th>Atomic</th>
+              </tr>
+            </thead>
+            <tbody id="matrix">
+              <tr>
+                <td colspan="4">Run the suite to calculate all 27 experiments.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section class="deep-dive">
+        <div>
+          <p class="edition">Implementation contract</p>
+          <h2>Put the boundary<br />where the write lives.</h2>
+          <p>
+            The atomic design assumes one authoritative transaction can evaluate authority, validate
+            approved intent, reserve budget and record the effect. It is a model of a contract your
+            backend must implement.
+          </p>
+          <p>
+            If payment happens in an external provider, a local database transaction alone cannot
+            enforce that whole contract. Define provider idempotency, outbox delivery,
+            reconciliation and the point beyond which revocation can no longer cancel the action.
+          </p>
+        </div>
+        <pre class="code">
+transaction(authority, budget, ledger) {
   if (ledger.has(intent.key))
     return previous_result;
 
@@ -21,7 +290,84 @@
 
   budget.reserve(amount);
   ledger.write(intent.key, effect);
-} // one simulated linearisation point</pre></section>
-<section class="limits"><h2>Read the assumptions before the result.</h2><details open><summary>What the engine actually models</summary><p>Ordered events and interleavings; a two-hop delegation chain; scope, resource and audience constraints; grant expiry; authoritative versus delayed replica state; intent binding; shared budget; duplicate delivery. The trace is reproducible. Its times are inputs, not latency measurements.</p></details><details><summary>What it does not implement</summary><p>No signed tokens, OAuth server, cryptographic identity, clock skew, real database locks, network partitions, crash recovery or external payment system. The in-memory atomic operation represents serialisation, not a distributed implementation. No LLM reasoning is simulated.</p></details><details><summary>Why an event can be allowed and still violate an invariant</summary><p>The cached and preflight designs intentionally reuse an earlier decision. At a successful write the lab independently evaluates current authoritative constraints and approved intent, and checks for duplicate effects. That independent oracle labels unsafe writes. In the evidence panel, write-event checks for those designs show this oracle, not checks their enforcement actually performed.</p></details><details><summary>What to test in a real implementation</summary><p>Revoke every ancestor grant; vary replication lag and token lifetime; mutate approval-bound fields; replay the same key with the same and different payloads; race two workers against a shared budget; crash between provider success and acknowledgement. Assert ledger invariants and valid-control completion, then document the exact cancellation boundary.</p></details></section>
-<section class="sources"><h2>Go deeper</h2><a href="https://datatracker.ietf.org/doc/html/rfc8693" target="_blank" rel="noopener"><strong>Delegation &amp; actor identity</strong><span>RFC 8693 token exchange: subject and actor semantics. This lab does not implement the protocol. ↗</span></a><a href="https://docs.fga.dev/writing-data/consistency-modes" target="_blank" rel="noopener"><strong>Permission freshness</strong><span>Auth0 FGA: caches, consistency options and the remaining replication-lag caveat. ↗</span></a><a href="https://docs.stripe.com/api/idempotent_requests" target="_blank" rel="noopener"><strong>Safe request retries</strong><span>Stripe: idempotency keys, repeated requests and parameter matching. ↗</span></a><a href="https://github.com/OWASP/AISVS/issues/1196" target="_blank" rel="noopener"><strong>The revocation test</strong><span>Read the contributed verification example and discussion. ↗</span></a></section>
-<footer><a href="https://mahmadafzal.com" target="_blank" rel="noopener">Built by Ahmad Afzal</a><span>Explore the boundary. Question the guarantee.</span></footer></main><script src="engine.js"></script><script src="app.js"></script></body></html>
+} // one simulated linearisation point</pre
+        >
+      </section>
+      <section class="limits">
+        <h2>Read the assumptions before the result.</h2>
+        <details open>
+          <summary>What the engine actually models</summary>
+          <p>
+            Ordered events and interleavings; a two-hop delegation chain; scope, resource and
+            audience constraints; grant expiry; authoritative versus delayed replica state; intent
+            binding; shared budget; duplicate delivery. The trace is reproducible. Its times are
+            inputs, not latency measurements.
+          </p>
+        </details>
+        <details>
+          <summary>What it does not implement</summary>
+          <p>
+            No signed tokens, OAuth server, cryptographic identity, clock skew, real database locks,
+            network partitions, crash recovery or external payment system. The in-memory atomic
+            operation represents serialisation, not a distributed implementation. No LLM reasoning
+            is simulated.
+          </p>
+        </details>
+        <details>
+          <summary>Why an event can be allowed and still violate an invariant</summary>
+          <p>
+            The cached and preflight designs intentionally reuse an earlier decision. At a
+            successful write the browser model performs a separate verification pass against current
+            authoritative constraints, approved intent and duplicate effects. It reuses the engine’s
+            policy predicate, so it is not an independent implementation. In the evidence panel,
+            write-event checks for those designs show this verification pass, not checks their
+            enforcement performed. The CLI framework instead compares observed effects against
+            literal expectations in its fixtures.
+          </p>
+        </details>
+        <details>
+          <summary>What to test in a real implementation</summary>
+          <p>
+            Revoke every ancestor grant; vary replication lag and token lifetime; mutate
+            approval-bound fields; replay the same key with the same and different payloads; race
+            two workers against a shared budget; crash between provider success and acknowledgement.
+            Assert ledger invariants and valid-control completion, then document the exact
+            cancellation boundary.
+          </p>
+        </details>
+      </section>
+      <section class="sources">
+        <h2>Go deeper</h2>
+        <a href="https://datatracker.ietf.org/doc/html/rfc8693" target="_blank" rel="noopener"
+          ><strong>Delegation &amp; actor identity</strong
+          ><span
+            >RFC 8693 token exchange: subject and actor semantics. This lab does not implement the
+            protocol. ↗</span
+          ></a
+        ><a
+          href="https://docs.fga.dev/writing-data/consistency-modes"
+          target="_blank"
+          rel="noopener"
+          ><strong>Permission freshness</strong
+          ><span
+            >Auth0 FGA: caches, consistency options and the remaining replication-lag caveat.
+            ↗</span
+          ></a
+        ><a href="https://docs.stripe.com/api/idempotent_requests" target="_blank" rel="noopener"
+          ><strong>Safe request retries</strong
+          ><span>Stripe: idempotency keys, repeated requests and parameter matching. ↗</span></a
+        ><a href="https://github.com/OWASP/AISVS/issues/1196" target="_blank" rel="noopener"
+          ><strong>The revocation test</strong
+          ><span>Read the contributed verification example and discussion. ↗</span></a
+        >
+      </section>
+      <footer>
+        <a href="https://mahmadafzal.com" target="_blank" rel="noopener">Built by Ahmad Afzal</a
+        ><span>Explore the boundary. Question the guarantee.</span>
+      </footer>
+    </main>
+    <script src="engine.js"></script>
+    <script src="share-state.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

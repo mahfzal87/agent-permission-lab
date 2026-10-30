@@ -1,1 +1,42 @@
-{"name":"agent-permission-lab","version":"2.0.0","private":true,"type":"commonjs","scripts":{"test":"node test.cjs","serve":"python3 -m http.server 4187"}}
+{
+  "name": "agent-permission-lab",
+  "version": "3.0.0",
+  "description": "Test agent permission changes, retries and side effects with deterministic fixtures, adapters and portable evidence.",
+  "private": true,
+  "type": "commonjs",
+  "license": "MIT",
+  "author": "Ahmad Afzal",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mahfzal87/agent-permission-lab.git"
+  },
+  "homepage": "https://mahfzal87.github.io/agent-permission-lab/",
+  "bugs": {
+    "url": "https://github.com/mahfzal87/agent-permission-lab/issues"
+  },
+  "keywords": [
+    "agent-security",
+    "agent-identity",
+    "authorization",
+    "permission-testing",
+    "revocation",
+    "idempotency",
+    "ai-governance",
+    "sqlite"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "permission-lab": "bin/permission-lab.cjs"
+  },
+  "scripts": {
+    "test": "node test.cjs && node --test tests/*.test.cjs",
+    "test:model": "node test.cjs",
+    "test:framework": "node --test tests/framework*.test.cjs",
+    "test:sqlite": "node --test tests/sqlite*.test.cjs",
+    "lab:list": "node bin/permission-lab.cjs list",
+    "lab:run": "node bin/permission-lab.cjs run --adapter atomic",
+    "serve": "python3 -m http.server 4187 --bind 127.0.0.1"
+  }
+}

@@ -1,0 +1,34 @@
+name: Permission lifecycle fixture
+description: Propose a reproducible permission failure or positive control.
+title: '[Fixture] '
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: Do not paste credentials, personal data or a live exploit. See SECURITY.md for sensitive findings.
+  - type: textarea
+    id: boundary
+    attributes:
+      label: Protected effect and commit boundary
+      description: What changes, where does it become durable, and when is cancellation too late?
+    validations:
+      required: true
+  - type: textarea
+    id: schedule
+    attributes:
+      label: Smallest event schedule
+      description: Initial authority, queued request, authority or approval change, execution and observation.
+    validations:
+      required: true
+  - type: textarea
+    id: expectations
+    attributes:
+      label: Expected evidence and valid control
+      description: Include the denied or duplicate outcome, observed effect count, and the valid action that must still succeed.
+    validations:
+      required: true
+  - type: textarea
+    id: limits
+    attributes:
+      label: Sources and assumptions
+      description: State whether this is a model, database test or real integration. Link applicable primary documentation.

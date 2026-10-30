@@ -1,0 +1,8 @@
+node_modules/
+coverage/
+/evidence/
+*.db
+*.db-shm
+*.db-wal
+__pycache__/
+.DS_Store
