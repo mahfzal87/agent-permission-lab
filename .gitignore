@@ -1,6 +1,6 @@
 node_modules/
 coverage/
-evidence/
+/evidence/
 *.db
 *.db-shm
 *.db-wal

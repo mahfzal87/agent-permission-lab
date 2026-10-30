@@ -1,0 +1,419 @@
+{
+  "schemaVersion": 1,
+  "frameworkVersion": "3.0.0",
+  "environment": {
+    "node": "v24.15.0",
+    "platform": "darwin",
+    "arch": "arm64"
+  },
+  "provenance": {
+    "sourceHashes": {
+      "fixtures.cjs": "e3772224cd6008abd611a6c97d4e85032873d73a3f93885dc96fcc5f46f17af7",
+      "runner.cjs": "315d70d144053889a9be853d390e5c3a809b78d9dfaaf7f84d385c44f9a5f96d",
+      "schema.cjs": "cc266bbb50aa1e88550cd52602341a484c09a830b3640b3d23e6a1e97af4dea0"
+    },
+    "selectedFixtureHashes": {
+      "queued-revocation": "39e49abd3ea1e41be60faa3f313936e27c24db30fce24e3fdaaedf55e64bffcb"
+    },
+    "timeoutMs": 2000,
+    "adapterEntry": {
+      "name": "sqlite",
+      "sha256": "0eb021f21cc2a5569eda028d8265683891984c6b251119719675e28fd0ea94e9",
+      "scope": "Entry-file hash only; transitive custom adapter dependencies are not attested."
+    }
+  },
+  "framework": "Agent Permission Lab conformance exercises",
+  "generatedAt": "2026-10-30T13:13:18.192Z",
+  "scope": "Bounded fixture observations. Not a security certification, production guarantee or proof of protocol compliance.",
+  "summary": {
+    "pass": 1,
+    "fail": 0,
+    "inconclusive": 0,
+    "total": 1
+  },
+  "exitCode": 0,
+  "results": [
+    {
+      "fixture": "queued-revocation",
+      "title": "Revocation commits before queued execution",
+      "status": "PASS",
+      "failures": [],
+      "steps": [
+        {
+          "op": "enqueue",
+          "input": {
+            "at": 0,
+            "request": {
+              "id": "R-001",
+              "key": "intent-1",
+              "subject": "user:amina",
+              "actor": "agent:refund-worker",
+              "action": "refund:create",
+              "resource": "order:1042",
+              "audience": "payments-api",
+              "recipient": "customer:1042",
+              "amount": 40,
+              "childLimit": 100
+            },
+            "approval": {
+              "revision": 1,
+              "intent": {
+                "id": "R-001",
+                "key": "intent-1",
+                "subject": "user:amina",
+                "actor": "agent:refund-worker",
+                "action": "refund:create",
+                "resource": "order:1042",
+                "audience": "payments-api",
+                "recipient": "customer:1042",
+                "amount": 40,
+                "childLimit": 100
+              }
+            }
+          },
+          "before": {
+            "authority": {
+              "action": "refund:create",
+              "active": true,
+              "actor": "agent:refund-worker",
+              "audience": "payments-api",
+              "budget": 120,
+              "expiresAt": 1000,
+              "id": "grant-1",
+              "limit": 100,
+              "recipient": "customer:1042",
+              "resource": "order:1042",
+              "revision": 1,
+              "subject": "user:amina"
+            },
+            "ledger": [],
+            "requests": [],
+            "spent": 0
+          },
+          "returned": {
+            "accepted": true,
+            "reasonCodes": []
+          },
+          "after": {
+            "authority": {
+              "action": "refund:create",
+              "active": true,
+              "actor": "agent:refund-worker",
+              "audience": "payments-api",
+              "budget": 120,
+              "expiresAt": 1000,
+              "id": "grant-1",
+              "limit": 100,
+              "recipient": "customer:1042",
+              "resource": "order:1042",
+              "revision": 1,
+              "subject": "user:amina"
+            },
+            "ledger": [],
+            "requests": [
+              {
+                "accepted": true,
+                "approval": {
+                  "intent": {
+                    "action": "refund:create",
+                    "actor": "agent:refund-worker",
+                    "amount": 40,
+                    "audience": "payments-api",
+                    "childLimit": 100,
+                    "id": "R-001",
+                    "key": "intent-1",
+                    "recipient": "customer:1042",
+                    "resource": "order:1042",
+                    "subject": "user:amina"
+                  },
+                  "revision": 1
+                },
+                "request": {
+                  "action": "refund:create",
+                  "actor": "agent:refund-worker",
+                  "amount": 40,
+                  "audience": "payments-api",
+                  "childLimit": 100,
+                  "id": "R-001",
+                  "key": "intent-1",
+                  "recipient": "customer:1042",
+                  "resource": "order:1042",
+                  "subject": "user:amina"
+                }
+              }
+            ],
+            "spent": 0
+          }
+        },
+        {
+          "op": "changeAuthority",
+          "input": {
+            "at": 30,
+            "patch": {
+              "active": false
+            }
+          },
+          "before": {
+            "authority": {
+              "action": "refund:create",
+              "active": true,
+              "actor": "agent:refund-worker",
+              "audience": "payments-api",
+              "budget": 120,
+              "expiresAt": 1000,
+              "id": "grant-1",
+              "limit": 100,
+              "recipient": "customer:1042",
+              "resource": "order:1042",
+              "revision": 1,
+              "subject": "user:amina"
+            },
+            "ledger": [],
+            "requests": [
+              {
+                "accepted": true,
+                "approval": {
+                  "intent": {
+                    "action": "refund:create",
+                    "actor": "agent:refund-worker",
+                    "amount": 40,
+                    "audience": "payments-api",
+                    "childLimit": 100,
+                    "id": "R-001",
+                    "key": "intent-1",
+                    "recipient": "customer:1042",
+                    "resource": "order:1042",
+                    "subject": "user:amina"
+                  },
+                  "revision": 1
+                },
+                "request": {
+                  "action": "refund:create",
+                  "actor": "agent:refund-worker",
+                  "amount": 40,
+                  "audience": "payments-api",
+                  "childLimit": 100,
+                  "id": "R-001",
+                  "key": "intent-1",
+                  "recipient": "customer:1042",
+                  "resource": "order:1042",
+                  "subject": "user:amina"
+                }
+              }
+            ],
+            "spent": 0
+          },
+          "returned": null,
+          "after": {
+            "authority": {
+              "action": "refund:create",
+              "active": false,
+              "actor": "agent:refund-worker",
+              "audience": "payments-api",
+              "budget": 120,
+              "expiresAt": 1000,
+              "id": "grant-1",
+              "limit": 100,
+              "recipient": "customer:1042",
+              "resource": "order:1042",
+              "revision": 2,
+              "subject": "user:amina"
+            },
+            "ledger": [],
+            "requests": [
+              {
+                "accepted": true,
+                "approval": {
+                  "intent": {
+                    "action": "refund:create",
+                    "actor": "agent:refund-worker",
+                    "amount": 40,
+                    "audience": "payments-api",
+                    "childLimit": 100,
+                    "id": "R-001",
+                    "key": "intent-1",
+                    "recipient": "customer:1042",
+                    "resource": "order:1042",
+                    "subject": "user:amina"
+                  },
+                  "revision": 1
+                },
+                "request": {
+                  "action": "refund:create",
+                  "actor": "agent:refund-worker",
+                  "amount": 40,
+                  "audience": "payments-api",
+                  "childLimit": 100,
+                  "id": "R-001",
+                  "key": "intent-1",
+                  "recipient": "customer:1042",
+                  "resource": "order:1042",
+                  "subject": "user:amina"
+                }
+              }
+            ],
+            "spent": 0
+          }
+        },
+        {
+          "op": "execute",
+          "input": {
+            "at": 100,
+            "requestId": "R-001"
+          },
+          "before": {
+            "authority": {
+              "action": "refund:create",
+              "active": false,
+              "actor": "agent:refund-worker",
+              "audience": "payments-api",
+              "budget": 120,
+              "expiresAt": 1000,
+              "id": "grant-1",
+              "limit": 100,
+              "recipient": "customer:1042",
+              "resource": "order:1042",
+              "revision": 2,
+              "subject": "user:amina"
+            },
+            "ledger": [],
+            "requests": [
+              {
+                "accepted": true,
+                "approval": {
+                  "intent": {
+                    "action": "refund:create",
+                    "actor": "agent:refund-worker",
+                    "amount": 40,
+                    "audience": "payments-api",
+                    "childLimit": 100,
+                    "id": "R-001",
+                    "key": "intent-1",
+                    "recipient": "customer:1042",
+                    "resource": "order:1042",
+                    "subject": "user:amina"
+                  },
+                  "revision": 1
+                },
+                "request": {
+                  "action": "refund:create",
+                  "actor": "agent:refund-worker",
+                  "amount": 40,
+                  "audience": "payments-api",
+                  "childLimit": 100,
+                  "id": "R-001",
+                  "key": "intent-1",
+                  "recipient": "customer:1042",
+                  "resource": "order:1042",
+                  "subject": "user:amina"
+                }
+              }
+            ],
+            "spent": 0
+          },
+          "returned": {
+            "decision": "denied",
+            "evidence": {
+              "approvalRevision": 1,
+              "authorityRevision": 2
+            },
+            "reasonCodes": [
+              "revoked"
+            ]
+          },
+          "after": {
+            "authority": {
+              "action": "refund:create",
+              "active": false,
+              "actor": "agent:refund-worker",
+              "audience": "payments-api",
+              "budget": 120,
+              "expiresAt": 1000,
+              "id": "grant-1",
+              "limit": 100,
+              "recipient": "customer:1042",
+              "resource": "order:1042",
+              "revision": 2,
+              "subject": "user:amina"
+            },
+            "ledger": [],
+            "requests": [
+              {
+                "accepted": true,
+                "approval": {
+                  "intent": {
+                    "action": "refund:create",
+                    "actor": "agent:refund-worker",
+                    "amount": 40,
+                    "audience": "payments-api",
+                    "childLimit": 100,
+                    "id": "R-001",
+                    "key": "intent-1",
+                    "recipient": "customer:1042",
+                    "resource": "order:1042",
+                    "subject": "user:amina"
+                  },
+                  "revision": 1
+                },
+                "request": {
+                  "action": "refund:create",
+                  "actor": "agent:refund-worker",
+                  "amount": 40,
+                  "audience": "payments-api",
+                  "childLimit": 100,
+                  "id": "R-001",
+                  "key": "intent-1",
+                  "recipient": "customer:1042",
+                  "resource": "order:1042",
+                  "subject": "user:amina"
+                }
+              }
+            ],
+            "spent": 0
+          },
+          "expected": {
+            "decision": "denied",
+            "effectCount": 0,
+            "spent": 0
+          },
+          "failures": []
+        }
+      ],
+      "limitations": [],
+      "adapter": {
+        "id": "sqlite-transaction",
+        "label": "SQLite transaction boundary",
+        "kind": "database",
+        "capabilities": [
+          "preflight",
+          "authority-change",
+          "queued-change",
+          "approval-change",
+          "multi-request",
+          "logical-clock",
+          "effect-observation"
+        ]
+      },
+      "initial": {
+        "authority": {
+          "action": "refund:create",
+          "active": true,
+          "actor": "agent:refund-worker",
+          "audience": "payments-api",
+          "budget": 120,
+          "expiresAt": 1000,
+          "id": "grant-1",
+          "limit": 100,
+          "recipient": "customer:1042",
+          "resource": "order:1042",
+          "revision": 1,
+          "subject": "user:amina"
+        },
+        "ledger": [],
+        "requests": [],
+        "spent": 0
+      }
+    }
+  ],
+  "adapterSelection": "sqlite"
+}
