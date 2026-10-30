@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "If you use this software or its teaching fixtures, cite this repository and the commit you used."
+title: "Agent Permission Lab"
+type: software
+authors:
+  - family-names: Afzal
+    given-names: Ahmad
+repository-code: "https://github.com/mahfzal87/agent-permission-lab"
+url: "https://mahfzal87.github.io/agent-permission-lab/"
+license: MIT
